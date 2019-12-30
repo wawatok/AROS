@@ -1,4 +1,4 @@
-# Copyright © 2004-2017, The AROS Development Team. All rights reserved.
+# Copyright © 2004-2019, The AROS Development Team. All rights reserved.
 # $Id$
 
 include $(SRCDIR)/config/aros.cfg
@@ -11,14 +11,14 @@ ADDITIONALICONS := Demos \
          WBStartup \
          Rexxc
 
-#MM- iconset-Gorilla-wbench-icons-clean : iconset-Gorilla-wbench-icons-aros-clean iconset-Gorilla-additional-icons-aros-clean
-#MM- iconset-Gorilla-wbench-icons : iconset-Gorilla-wbench-icons-aros
-#MM- iconset-Gorilla-wbench-icons : iconset-Gorilla-additional-icons-aros
+#MM- iconset-iff-wbench-icons-clean : iconset-iff-wbench-icons-aros-clean iconset-iff-additional-icons-aros-clean
+#MM- iconset-iff-wbench-icons : iconset-iff-wbench-icons-aros
+#MM- iconset-iff-wbench-icons : iconset-iff-additional-icons-aros
 
-%build_icons mmake=iconset-Gorilla-wbench-icons-aros icons=$(BASEICONS) dir=$(AROSDIR)
+%build_icons mmake=iconset-iff-wbench-icons-aros icons=$(BASEICONS) fmt=iff dir=$(AROSDIR)
 
-%build_icons mmake=iconset-Gorilla-additional-icons-aros icons=$(ADDITIONALICONS) dir=$(AROSDIR)
+%build_icons mmake=iconset-iff-additional-icons-aros icons=$(ADDITIONALICONS) fmt=iff dir=$(AROSDIR)
 
 #MM
-iconset-Gorilla-wbench-icons-aros-livecd :  
+iconset-iff-wbench-icons-aros-livecd :  
 	@$(ILBMTOICON) $(SRCDIR)/$(CURDIR)/LiveCD.info.src $(SRCDIR)/$(CURDIR)/LiveCD.png $(AROSDIR)/disk.info
