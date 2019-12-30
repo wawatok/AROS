@@ -8,7 +8,7 @@ ICONS := CDROM_Amiga Harddisk_Amiga Harddisk_Linux Harddisk_MacOS Harddisk_Windo
 #MM- themes-iff-icons-clean : themes-iff-icons-disks-clean
 #MM- themes-iff-icons : themes-iff-icons-disks
 %build_icons mmake=themes-iff-icons-disks icons=$(ICONS) \
-             dir=$(AROS_CONTRIB)/Icons/iff/Disks
+             fmt=iff dir=$(AROS_CONTRIB)/Icons/iff/Disks
 
 #MM
 iconset-iff-icons-aros-livecd :
