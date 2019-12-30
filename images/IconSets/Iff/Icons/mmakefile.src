@@ -1,0 +1,6 @@
+# Copyright © 2019, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- iconset-iff-icons : iconset-iff-wbench-icons iconset-iff-additional-icons

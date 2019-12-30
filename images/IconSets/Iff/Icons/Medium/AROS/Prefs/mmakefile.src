@@ -1,0 +1,20 @@
+# Copyright © 2004-2019, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+BASEICONS := Time Locale Serial Presets Input IControl Font ScreenMode Palette Pointer Printer
+ADDITIONALICONS := AHI Appearance Boot  \
+ ReqTools Wanderer Zune Editor Trackdisk PSI Network Trident \
+ OpenURL BoingIconBar
+
+#MM- iconset-iff-wbench-icons-aros-clean : iconset-iff-wbench-icons-aros-prefs-clean
+#MM- iconset-iff-additional-icons-aros-clean : iconset-iff-additional-icons-aros-prefs-clean
+#MM- iconset-iff-wbench-icons-aros : iconset-iff-wbench-icons-aros-prefs
+#MM- iconset-iff-additional-icons-aros : iconset-iff-additional-icons-aros-prefs
+
+%build_icons mmake=iconset-iff-wbench-icons-aros-prefs icons=$(BASEICONS) \
+             fmt=iff dir=$(AROS_PREFS)
+
+%build_icons mmake=iconset-iff-additional-icons-aros-prefs icons=$(ADDITIONALICONS) \
+             fmt=iff dir=$(AROS_PREFS)

@@ -1,0 +1,11 @@
+# Copyright © 2017-2019, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+ADDITIONALICONS := PCITool 
+
+#MM- iconset-iff-additional-icons-aros-clean : iconset-iff-additional-icons-aros-debug-hardware-clean
+#MM- iconset-iff-additional-icons-aros-debug : iconset-iff-additional-icons-aros-debug-hardware
+%build_icons mmake=iconset-iff-additional-icons-aros-debug-hardware \
+             icons=$(ADDITIONALICONS) fmt=iff dir=$(AROS_DEBUG)/Hardware

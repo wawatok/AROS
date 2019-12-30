@@ -1,0 +1,11 @@
+# Copyright © 2004-2019, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+ICONS := Mouse Pointer
+
+#MM- themes-iff-icons-clean : themes-iff-icons-other-clean
+#MM- themes-iff-icons : themes-iff-icons-other
+%build_icons mmake=themes-iff-icons-other icons=$(ICONS) \
+             dir=$(AROS_CONTRIB)/Icons/iff/Other
