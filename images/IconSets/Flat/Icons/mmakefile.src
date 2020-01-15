@@ -1,0 +1,6 @@
+# Copyright © 2004-2019, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- iconset-flat-icons : iconset-flat-wbench-icons iconset-flat-additional-icons

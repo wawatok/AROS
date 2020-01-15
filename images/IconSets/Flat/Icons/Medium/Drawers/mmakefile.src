@@ -1,0 +1,11 @@
+# Copyright © 2019, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+ICONS := Amiga Downloads-2 Downloads Linux Windows
+
+#MM- themes-flat-icons-clean : themes-flat-icons-drawers-clean
+#MM- themes-flat-icons : themes-flat-icons-drawers
+%build_icons mmake=themes-flat-icons-drawers icons=$(ICONS) \
+             dir=$(AROS_CONTRIB)/Icons/iff/Drawers

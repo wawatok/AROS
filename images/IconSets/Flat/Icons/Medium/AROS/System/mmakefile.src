@@ -1,0 +1,25 @@
+# Copyright © 2004-2019, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+BASEICONS := About FixFonts Format FTManager WorkBook Shell
+ADDITIONALICONS := SysMon Snoopy Find
+
+DISKIMAGESRCS := DiskImageGUI-1.png DiskImageGUI-2.png
+DISKIMAGEICON := DiskImageGUI
+
+#MM- iconset-flat-wbench-icons-aros-clean : iconset-flat-wbench-icons-aros-system-clean
+#MM- iconset-flat-additional-icons-aros-clean : iconset-flat-additional-icons-aros-system-clean
+#MM- iconset-flat-wbench-icons-aros : iconset-flat-wbench-icons-aros-system
+#MM- iconset-flat-additional-icons-aros : iconset-flat-additional-icons-aros-system
+#MM  iconset-flat-additional-icons-aros-system : iconset-flat-additional-icons-aros-system-diskimage
+
+%build_icons mmake=iconset-flat-wbench-icons-aros-system icons=$(BASEICONS) \
+             fmt=iff dir=$(AROS_SYSTEM)
+
+%build_icons mmake=iconset-flat-additional-icons-aros-system icons=$(ADDITIONALICONS) \
+             fmt=iff dir=$(AROS_SYSTEM)
+
+%build_icons mmake=iconset-flat-additional-icons-aros-system-diskimage \
+             icons=$(DISKIMAGEICON) fmt=iff dir=$(AROS_SYSTEM) image=$(DISKIMAGESRCS)

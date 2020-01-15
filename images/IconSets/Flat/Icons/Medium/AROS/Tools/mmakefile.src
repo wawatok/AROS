@@ -1,0 +1,19 @@
+# Copyright © 2004-2019, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+BASEICONS := Calculator HDToolBox InstallAROS Editor Commodities \
+         ShowConfig KeyShow InitPrinter PrintFiles GraphicDump
+ADDITIONALICONS := WiMP ScreenGrabber SysExplorer BoingIconBar
+
+#MM- iconset-flat-wbench-icons-aros-clean : iconset-flat-wbench-icons-aros-tools-clean
+#MM- iconset-flat-additional-icons-aros-clean : iconset-flat-additional-icons-aros-tools-clean
+#MM- iconset-flat-wbench-icons-aros : iconset-flat-wbench-icons-aros-tools
+#MM- iconset-flat-additional-icons-aros : iconset-flat-additional-icons-aros-tools
+
+%build_icons mmake=iconset-flat-wbench-icons-aros-tools icons=$(BASEICONS) \
+             fmt=iff dir=$(AROS_TOOLS)
+
+%build_icons mmake=iconset-flat-additional-icons-aros-tools icons=$(ADDITIONALICONS) \
+             fmt=iff dir=$(AROS_TOOLS)
