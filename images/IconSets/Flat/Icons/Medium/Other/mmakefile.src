@@ -1,0 +1,11 @@
+# Copyright © 2004-2019, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+ICONS := Mouse Pointer
+
+#MM- themes-flat-icons-clean : themes-flat-icons-other-clean
+#MM- themes-flat-icons : themes-flat-icons-other
+%build_icons mmake=themes-flat-icons-other icons=$(ICONS) \
+             dir=$(AROS_CONTRIB)/Icons/iff/Other
