@@ -17,18 +17,13 @@
 #include <intuition/intuitionbase.h>
 #include <intuition/classusr.h>
 
-#ifdef __AROS__
 #include <clib/alib_protos.h>
-#endif
 
 #include <utility/utility.h>
 #include <dos/dosextens.h>
 #include <libraries/mui.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
-#if defined(__AMIGA__) && !defined(__PPC__)
-#define NO_INLINE_STDARG
-#endif
 #include <proto/muimaster.h>
 
 #ifndef _PROTO_INTUITION_H
@@ -131,5 +126,6 @@ WORD AskChoice(const char *title, const char *strg, const char *gadgets, UWORD s
 WORD AskChoiceCentered(const char *title, const char *strg, const char *gadgets, UWORD sel);
 
 BOOL CopyContent(APTR p, char *s, char *d, BOOL makeparentdir, ULONG flags, struct Hook *displayHook, struct OpModes *opModes, APTR userdata);
+BOOL MoveContent(APTR p, char *s, char *d, BOOL makeparentdir, ULONG flags, struct Hook *displayHook, struct OpModes *opModes, APTR userdata);
 
 #endif /* WANDERER_FILESYSTEMS_H */
