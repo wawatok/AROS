@@ -126,6 +126,5 @@ WORD AskChoice(const char *title, const char *strg, const char *gadgets, UWORD s
 WORD AskChoiceCentered(const char *title, const char *strg, const char *gadgets, UWORD sel);
 
 BOOL CopyContent(APTR p, char *s, char *d, BOOL makeparentdir, ULONG flags, struct Hook *displayHook, struct OpModes *opModes, APTR userdata);
-BOOL MoveContent(APTR p, char *s, char *d, BOOL makeparentdir, ULONG flags, struct Hook *displayHook, struct OpModes *opModes, APTR userdata);
 
 #endif /* WANDERER_FILESYSTEMS_H */

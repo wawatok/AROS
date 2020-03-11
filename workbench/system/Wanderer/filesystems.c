@@ -3,7 +3,10 @@
     $Id$
 */
 
+#define DEBUG 1
+
 #include  "filesystems.h"
+#include <aros/debug.h>
 
 struct TagItem DummyTags[] = { {TAG_DONE, 0}};
 
@@ -390,6 +393,8 @@ static BOOL copyFile(APTR pool, char *file, char *destpath,
     BPTR   in, out;
     BYTE   *buffer;
     BPTR   nLock;
+
+    D(bug("Filesystems: copyFile -> Source: %s, Destination: %s", file, destpath));
 
     if (display != NULL) display->totallen = 0;
     if (display != NULL) display->actlen = 0;
@@ -898,7 +903,7 @@ static BOOL actionDir(APTR pool, ULONG flags, char *source, char *dest,
 #undef pmode
 #undef omode
 
-BOOL createDirectory(STRPTR dest, APTR pool, STRPTR d, STRPTR destname) {
+BOOL createDirectory(STRPTR dest, APTR pool, STRPTR s, STRPTR d, STRPTR destname) {
     BOOL created = FALSE;
     struct  FileInfoBlock  *FIB;
     FIB = (struct FileInfoBlock*) AllocDosObject(DOS_FIB,DummyTags);
@@ -1016,7 +1021,7 @@ BOOL CopyContent(APTR p, char *s, char *d, BOOL makeparentdir, ULONG flags, stru
             {
                 freeString(pool, dest);
                 dest = NULL;
-                created = createDirectory(dest, pool, d, destname);
+                created = createDirectory(dest, pool, s, d, destname);
             }
         }
     }
@@ -1153,233 +1158,6 @@ BOOL CopyContent(APTR p, char *s, char *d, BOOL makeparentdir, ULONG flags, stru
     {
         SetProtection(destinfo, 0);
         copyFile(pool, infoname, d, NULL, NULL, NULL);
-    }
-
-    if (!back && opModes && (opModes->deletemode != OPMODE_NONE) && ((flags & ACTION_DELETE) !=0))
-    {
-        if (unprotectsrc && deletesrc)
-        {
-            deleteFile(s);
-            if (infoname) deleteFile(infoname);
-        }
-    }
-    
-    freeString(pool, infoname);
-    freeString(pool, destinfo);
-    freeString(pool, dest);
-
-    if (p == NULL) 
-        DeletePool(pool);
-    return !back;
-}
-
-BOOL MoveContent(APTR p, char *s, char *d, BOOL makeparentdir, ULONG flags, struct Hook *displayHook, struct OpModes *opModes, APTR userdata) 
-{
-
-
-    struct  dCopyStruct    display;
-    struct  dCopyStruct    askDisplay;
-    char       *destname, *dest, *path, *comment, *dpath, *infoname, *destinfo;
-    APTR       pool;
-    BOOL       dir = TRUE;
-    BOOL       created = FALSE;
-    BOOL       back = FALSE;
-    BOOL       deletesrc, unprotectsrc;
-    LONG       info;
-
-    if (p == NULL) 
-    {
-        pool = CreatePool(MEMF_CLEAR|MEMF_ANY, POOLSIZE, POOLSIZE);
-    } 
-    else 
-    {
-        pool = p;
-    }
-
-    if (pool == NULL) return FALSE;
-
-    infoname = AllocVecPooled(pool, strlen(s)+6);
-    display.userdata = userdata;
-    askDisplay.userdata = userdata;
-    
-    if (infoname) 
-    {
-        strcpy (infoname, s);
-        strcat(infoname,".info");
-    }
-
-    if (d) destinfo = AllocVecPooled(pool, strlen(d)+6); else destinfo = NULL;
-
-    if (destinfo) 
-    {
-        strcpy (destinfo, d);
-        strcat(destinfo,".info");
-    }
-    
-    destname = FilePart(s);
-
-    info = GetFileInfo(s);
-
-    if (info == -1) 
-    {
-        freeString(pool, infoname);
-        freeString(pool, destinfo);
-        if (p == NULL) DeletePool(pool);
-        return TRUE;
-    }
-
-    if ((info & FILEINFO_DIR) != 0) dir = TRUE; else dir = FALSE;
-
-    dest = NULL;
-
-    if ((flags & ACTION_COPY) !=0 ) dest = allocString(pool, d);
-
-    /* If moving a directory, create target directory */
-    if (makeparentdir && dir && dest) 
-    {
-        if (destname) 
-        {
-            if (strlen(destname)>0) 
-            {
-                freeString(pool, dest);
-                dest = NULL;
-                created = createDirectory(dest, pool, d, destname);
-            }
-        }
-    }
-
-    path = NULL;
-
-    deletesrc = FALSE;
-    unprotectsrc = TRUE;
-    /* If deleting ask for confirmation, ask to unprotect */
-    if (opModes && (opModes->deletemode != OPMODE_NONE) && ((flags & ACTION_DELETE) != 0) && ((makeparentdir && dir) || !dir))
-    {
-        if (dir) 
-        {
-            askDisplay.spath = s;
-            askDisplay.file = NULL;
-        } 
-        else 
-        {
-            path = allocPath(pool, s);
-            askDisplay.spath = path;
-            askDisplay.file = FilePart(s);
-        }
-        askDisplay.type = 0;
-
-        if (opModes->deletemode != OPMODE_ALL) opModes->deletemode = CallHook(opModes->askhook, (Object *) &askDisplay, NULL);
-        if ((opModes->deletemode == OPMODE_ALL) || (opModes->deletemode == OPMODE_YES))
-        {
-            deletesrc = TRUE;
-            if ((info & (FILEINFO_PROTECTED|FILEINFO_WRITE)) != 0)
-            {
-                askDisplay.type = 1;
-                unprotectsrc = FALSE;
-                opModes->protectmode = CallHook(opModes->askhook, (Object *) &askDisplay, NULL);
-                if ((opModes->protectmode == OPMODE_ALL) || (opModes->protectmode == OPMODE_YES))
-                {
-                    SetProtection(s, 0);
-                    if (infoname) SetProtection(infoname, 0);
-                    unprotectsrc = TRUE;
-                }
-            }
-        }
-    }
-
-    /* If copying ask to overwrite, ask to unprotect */
-    if (dest) 
-    {
-        if (opModes && !dir)
-        {
-            dpath = combinePath(pool, d, FilePart(s));
-            if (dpath) 
-            {
-                info = GetFileInfo(dpath);
-                if (info != -1) 
-                {
-                    if (opModes && (opModes->overwritemode != OPMODE_NONE))
-                    {
-                        if (
-                            (opModes->overwritemode == OPMODE_ASK) || (opModes->overwritemode == OPMODE_YES) ||
-                            (opModes->overwritemode == OPMODE_ALL) || (opModes->overwritemode == OPMODE_NO)
-                        ) 
-                        {
-                            askDisplay.spath = d;
-                            askDisplay.file = FilePart(s);
-                            askDisplay.type = 2;
-                            if (opModes->overwritemode != OPMODE_ALL) opModes->overwritemode = CallHook(opModes->askhook, (Object *) &askDisplay, NULL);
-                            if ((opModes->overwritemode == OPMODE_ALL) || (opModes->overwritemode == OPMODE_YES))
-                            {
-                                if (((info & (FILEINFO_PROTECTED|FILEINFO_WRITE)) != 0) && (opModes->protectmode != OPMODE_NONE))
-                                {
-                                    if (
-                                        (opModes->protectmode == OPMODE_ASK) || (opModes->protectmode == OPMODE_YES) ||
-                                        (opModes->protectmode == OPMODE_ALL) || (opModes->protectmode == OPMODE_NO)
-                                    ) 
-                                    {
-                                        askDisplay.spath = d;
-                                        askDisplay.file = FilePart(s);
-                                        askDisplay.type = 1;
-                                        if (opModes->protectmode != OPMODE_ALL) opModes->protectmode = CallHook(opModes->askhook, (Object *) &askDisplay, NULL);
-                                        if ((opModes->protectmode == OPMODE_ALL) || (opModes->protectmode == OPMODE_YES))
-                                        {
-                                            SetProtection(dpath, 0);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                freeString(pool, dpath);
-            }
-        }
-    }
-    freeString(pool, path);
-
-    if (dir) 
-    {
-        if (dest || ((flags & ACTION_DELETE) != 0))
-        {
-            if (
-                ((opModes->deletemode == OPMODE_NONE) || (opModes->deletemode == OPMODE_NO)) &&
-                (flags & (ACTION_DELETE|ACTION_COPY)) == ACTION_DELETE
-            ) 
-            {
-                back = FALSE; 
-            }
-            else 
-            {
-                back = actionDir(pool, flags, s, dest, FALSE, displayHook, opModes, userdata);
-            }
-        } 
-        else back = TRUE;
-    } 
-    else 
-    {
-        if (flags == ACTION_DELETE) back = FALSE; 
-        else
-        {
-            STRPTR path = allocPath(pool, s);
-            display.file = FilePart(s);
-            display.filelen = 0;
-            display.totallen = 0;
-            display.actlen = 0;
-
-            if (path) display.spath = path; else display.spath = s;
-            display.dpath = d;
-            display.flags = (flags &= ~ACTION_UPDATE);
-            if (displayHook) CallHook(displayHook, (Object *) &display, NULL);
-            back = moveFile(pool, s, d, NULL, displayHook, &display);
-            freeString(pool, path);
-        }
-    }
-
-    if (!back && destinfo && infoname) 
-    {
-        SetProtection(destinfo, 0);
-        moveFile(pool, infoname, d, NULL, NULL, NULL);
     }
 
     if (!back && opModes && (opModes->deletemode != OPMODE_NONE) && ((flags & ACTION_DELETE) !=0))
