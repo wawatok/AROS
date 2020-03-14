@@ -117,6 +117,8 @@ struct WandererPrefs_DATA
     BOOL                        wpd_PROCESSING;
 
     struct WandererFontPrefsData wfpd;
+
+    ULONG                       wpd_IconDropMode;
 };
 
 struct WandererPrefs_ViewSettingsNode
@@ -610,6 +612,11 @@ IPTR WandererPrefs__OM_SET(Class *CLASS, Object *self, struct opSet *message)
       case MUIA_IconWindow_WindowNavigationMethod:
         data->wpd_NavigationMethod = (LONG)tag->ti_Data;
         break;
+
+      case MUIA_IconWindow_IconDropMode:
+        data->wpd_IconDropMode = (LONG)tag->ti_Data;
+        break;
+      
     }
   }
   
@@ -647,6 +654,10 @@ D(bug("[Wanderer:Prefs] WandererPrefs__GET: MUIA_IconWindowExt_ScreenTitle_Strin
       *store = (IPTR)data->wpd_NavigationMethod;
       break;
 
+    case MUIA_IconWindow_IconDropMode:
+      *store = (IPTR)data->wpd_IconDropMode;
+      break;
+      
     default:
       rv = DoSuperMethodA(CLASS, self, (Msg)message);
   }

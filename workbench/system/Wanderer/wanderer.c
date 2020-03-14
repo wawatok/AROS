@@ -10,7 +10,7 @@
 #ifdef __AROS__
 #define MUIMASTER_YES_INLINE_STDARG
 
-#define DEBUG 0
+#define DEBUG 1
 #include <aros/debug.h>
 #endif
 
@@ -354,12 +354,7 @@ HOOKPROTO(Wanderer__HookFunc_AskModeFunc, ULONG, struct dCopyStruct *obj, APTR u
 
     AROS_USERFUNC_EXIT
 }
-#ifndef __AROS__
-MakeStaticHook(Hook_AskModeFunc,Wanderer__HookFunc_AskModeFunc);
-#endif
-///
 
-///Wanderer__Func_CopyDropEntries()
 AROS_UFH3(void, Wanderer__Func_CopyDropEntries,
         AROS_UFHA(STRPTR,              argPtr, A0),
         AROS_UFHA(ULONG,               argSize, D0),
@@ -381,30 +376,34 @@ D(bug("[Wanderer]: %s()\n", __PRETTY_FUNCTION__));
         opModes.deletemode = OPMODE_ASK;
         opModes.protectmode = OPMODE_ASK;
         opModes.overwritemode = OPMODE_ASK;
-#ifdef __AROS__
+
         struct Hook displayCopyHook;
         struct Hook displayAskHook;
         displayCopyHook.h_Entry = (HOOKFUNC) Wanderer__HookFunc_DisplayCopyFunc;
         displayAskHook.h_Entry = (HOOKFUNC) Wanderer__HookFunc_AskModeFunc;
         opModes.askhook = &displayAskHook;
-#else
-        struct Hook *displayCopyHook;
-        struct Hook *displayAskHook;
-        displayCopyHook = &Hook_DisplayCopyFunc;
-        displayAskHook = &Hook_AskModeFunc;
-        opModes.askhook = displayAskHook;
-#endif
 
-        if (CreateCopyDisplay(ACTION_COPY, &dobjects))
+        currententry = ((struct IconList_Drop_SourceEntry *) copyFunc_DropEvent->drop_SourceList.lh_Head);
+
+        UBYTE action = ACTION_COPY;
+
+        if (copyFunc_DropEvent->drop_Mode == DROP_MODE_MOVE) {
+
+            action = (IsOnSameDrive(currententry->dropse_Node.ln_Name, copyFunc_DropEvent->drop_TargetPath) == 0 
+                ? ACTION_MOVE
+                : ACTION_COPY);
+        } 
+
+        if (CreateCopyDisplay(action, &dobjects))
         {
             while ((currententry = (struct IconList_Drop_SourceEntry *)RemTail(&copyFunc_DropEvent->drop_SourceList)) != NULL)
             {
-                D(bug("[Wanderer] %s: Copying '%s' to '%s'\n", __PRETTY_FUNCTION__,
-                        currententry->dropse_Node.ln_Name, copyFunc_DropEvent->drop_TargetPath));
+                D(bug("[Wanderer] %s: Copying '%s' to '%s' Action: '%ld'\n", __PRETTY_FUNCTION__,
+                        currententry->dropse_Node.ln_Name, copyFunc_DropEvent->drop_TargetPath, action));
 
-                CopyContent(NULL,
+                CopyOrMoveContent(NULL,
                             currententry->dropse_Node.ln_Name, copyFunc_DropEvent->drop_TargetPath,
-                            TRUE, ACTION_COPY, &displayCopyHook, &opModes, (APTR) &dobjects);
+                            TRUE, action, &displayCopyHook, &opModes, (APTR) &dobjects);
                 updatedIcons++;
 
                 FreeVec(currententry->dropse_Node.ln_Name);
@@ -413,14 +412,23 @@ D(bug("[Wanderer]: %s()\n", __PRETTY_FUNCTION__));
             /* delete copy window */
             DisposeCopyDisplay(&dobjects);
         }
-
+    
         if (updatedIcons > 0)
         {
-            /* Update state of target object after copying */
+            /* Update state of target object after copying or moving */
             DoMethod(_app(copyFunc_DropEvent->drop_TargetObj), MUIM_Application_PushMethod,
-                    copyFunc_DropEvent->drop_TargetObj, 1, MUIM_IconList_Update);
+                     copyFunc_DropEvent->drop_TargetObj, 1, MUIM_IconList_Update);
             DoMethod(_app(copyFunc_DropEvent->drop_TargetObj), MUIM_Application_PushMethod,
-                    copyFunc_DropEvent->drop_TargetObj, 1, MUIM_IconList_Sort);
+                     copyFunc_DropEvent->drop_TargetObj, 1, MUIM_IconList_Sort);
+
+            /* If moved, update state of source object after moving */
+            if (action == ACTION_MOVE)
+            {
+                DoMethod(_app(copyFunc_DropEvent->drop_SourceObj), MUIM_Application_PushMethod,
+                         copyFunc_DropEvent->drop_SourceObj, 1, MUIM_IconList_Update);
+                DoMethod(_app(copyFunc_DropEvent->drop_SourceObj), MUIM_Application_PushMethod,
+                         copyFunc_DropEvent->drop_SourceObj, 1, MUIM_IconList_Sort);
+            }
         }
 
         FreeVec(copyFunc_DropEvent->drop_TargetPath);
@@ -430,10 +438,7 @@ D(bug("[Wanderer]: %s()\n", __PRETTY_FUNCTION__));
 
     AROS_USERFUNC_EXIT
 }
-///
 
-///Wanderer__HookFunc_ActionFunc()
-#ifdef __AROS__
 AROS_UFH3
 (
     void, Wanderer__HookFunc_ActionFunc,
@@ -442,10 +447,6 @@ AROS_UFH3
     AROS_UFHA(struct IconWindow_ActionMsg *, msg, A1)
 )
 {
-#else
-HOOKPROTO(Wanderer__HookFunc_ActionFunc, void, Object *obj, struct IconWindow_ActionMsg *msg)
-{
-#endif
     AROS_USERFUNC_INIT
 
 D(bug("[Wanderer]: %s()\n", __PRETTY_FUNCTION__));
@@ -676,9 +677,12 @@ D(bug("[Wanderer] %s: ICONWINDOW_ACTION_OPEN: offset = %d, buf = %s\n", __PRETTY
     } 
     else if (msg->type == ICONWINDOW_ACTION_ICONDROP)
     {
+        Object *prefs = (Object*) XGET(_app(obj), MUIA_Wanderer_Prefs);
+
         struct Process                  *wandererCopyProcess;
         struct IconList_Drop_Event      *dropevent = (struct IconList_Drop_Event *)msg->drop;
-
+        
+        dropevent->drop_Mode = XGET(prefs, MUIA_IconWindow_IconDropMode);
         {
             wandererCopyProcess = CreateNewProcTags(
                                 NP_Entry,       (IPTR)Wanderer__Func_CopyDropEntries,
@@ -793,13 +797,7 @@ D(bug("[Wanderer] %s: win:<%s> first file:<%s> mx=%d my=%d\n", __PRETTY_FUNCTION
 
     AROS_USERFUNC_EXIT
 }
-#ifndef __AROS__
-MakeStaticHook(Hook_ActionFunc,Wanderer__HookFunc_ActionFunc);
-#endif
-///
 
-///Wanderer__HookFunc_StandardFunc()
-#ifdef __AROS__
 AROS_UFH3
 (
     void, Wanderer__HookFunc_StandardFunc,
@@ -808,10 +806,6 @@ AROS_UFH3
     AROS_UFHA(void **, funcptr, A1)
 )
 {
-#else
-HOOKPROTO(Wanderer__HookFunc_StandardFunc, void, void *dummy, void **funcptr)
-{
-#endif
     AROS_USERFUNC_INIT
 
     void (*func) (ULONG *) = (void (*)(ULONG *)) (*funcptr);
@@ -819,13 +813,7 @@ HOOKPROTO(Wanderer__HookFunc_StandardFunc, void, void *dummy, void **funcptr)
 
     AROS_USERFUNC_EXIT
 }
-#ifndef __AROS__
-MakeStaticHook(Hook_StandardFunc,Wanderer__HookFunc_StandardFunc);
-#endif
-///
 
-///Wanderer__HookFunc_BackdropFunc()
-#ifdef __AROS__
 AROS_UFH3
 (
     void, Wanderer__HookFunc_BackdropFunc,
@@ -834,10 +822,6 @@ AROS_UFH3
     AROS_UFHA(void **, funcptr, A1)
 )
 {
-#else
-HOOKPROTO(Wanderer__HookFunc_BackdropFunc, void, void *dummy, void **funcptr)
-{
-#endif
     AROS_USERFUNC_INIT
 
     struct Wanderer_DATA *data = INST_DATA(_WandererIntern_CLASS, _WandererIntern_AppObj);
@@ -2071,22 +2055,6 @@ void wanderer_menufunc_icon_snapshot(IPTR *flags)
     D(bug("[Wanderer] %s: finished ..\n", __PRETTY_FUNCTION__));
 }
 
-static char * get_volume(char * path)
-{
-    char * _return = NULL;
-    char * sep = strchr(path, ':');
-
-    if (sep)
-    {
-        int i = (int)(sep - path);
-        _return = AllocVec(i + 2, MEMF_CLEAR);
-        if (_return != NULL)
-            CopyMem(path, _return, i + 1);
-    }
-
-    return _return;
-}
-
 #define BDRPLINELEN_MAX 1024
 
 struct DesktopLinkIcon_Entry
@@ -2114,7 +2082,7 @@ void wanderer_menufunc_icon_leaveout(void)
     {
         D(bug("[Wanderer] %s: dir '%s'\n", __PRETTY_FUNCTION__, leavout_dir));
         
-        char *entryVolume = get_volume(leavout_dir);
+        char *entryVolume = GetVolume(leavout_dir);
 
         if (entryVolume != NULL)
         {
@@ -2299,7 +2267,7 @@ void wanderer_menufunc_icon_putaway(void)
             D(bug("[Wanderer] %s: entry = '%s' @ %p, (%p)\n", __PRETTY_FUNCTION__,
                     entry->ile_IconEntry->ie_IconNode.ln_Name, entry, node));
 
-            char *entryVolume = get_volume(entry->ile_IconEntry->ie_IconNode.ln_Name);
+            char *entryVolume = GetVolume(entry->ile_IconEntry->ie_IconNode.ln_Name);
 
             if (entryVolume == NULL)
             {
@@ -2627,6 +2595,14 @@ BOOL CreateCopyDisplay(UWORD flags, struct MUIDisplayObjects *d)
             SET(fileLengthObject, MUIA_Text_Contents, (IPTR) _(MSG_WANDERER_FILEACCESS_TRAFFIC) );
 
         } 
+        else if ((flags & ACTION_MOVE) == ACTION_MOVE) 
+        {
+            SET(fromObject, MUIA_Text_Contents, (IPTR) _(MSG_WANDERER_FILEACCESS_MOVEFROM) );
+            SET(toObject, MUIA_Text_Contents, (IPTR) _(MSG_WANDERER_FILEACCESS_MOVETO) );
+            SET(fileTextObject, MUIA_Text_Contents, (IPTR) _(MSG_WANDERER_FILEACCESS_FILE) );
+            SET(fileLengthObject, MUIA_Text_Contents, (IPTR) _(MSG_WANDERER_FILEACCESS_TRAFFIC) );
+
+        } 
         else if ((flags & ACTION_DELETE) == ACTION_DELETE) 
         {
             SET(fromObject, MUIA_Text_Contents, _(MSG_WANDERER_FILEACCESS_DELETEFROM) );
@@ -2681,7 +2657,7 @@ void wanderer_menufunc_icon_delete(void)
                 {
                     /* copy via filesystems.c */
                     D(bug("[Wanderer] Delete \"%s\"\n", entry->ile_IconEntry->ie_IconNode.ln_Name);)
-                    CopyContent( NULL, entry->ile_IconEntry->ie_IconNode.ln_Name, NULL, TRUE,
+                    CopyOrMoveContent( NULL, entry->ile_IconEntry->ie_IconNode.ln_Name, NULL, TRUE,
                             ACTION_DELETE, &displayCopyHook, &opModes, (APTR) &dobjects);
                     updatedIcons++;
                 }

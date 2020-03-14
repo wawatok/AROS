@@ -64,10 +64,6 @@ ADD2EXIT(name ## _Deinitialize, ZUNE_CUSTOMCLASS_PASS);               \
 
 #define __ZUNE_CUSTOMCLASS_METHOD(mname, mid, m_msg_type)        \
     case mid:                                                    \
-                                                                 \
-        D(bug("[ZCC] ENTERING "__AROS_STR(mname)                 \
-          "("__AROS_STR(m_msg_type)")\n"));                      \
-                                                                 \
         return (IPTR) mname(__class, __self, (m_msg_type)__msg)  \
 
 #else
@@ -77,7 +73,8 @@ ADD2EXIT(name ## _Deinitialize, ZUNE_CUSTOMCLASS_PASS);               \
         return (IPTR) mname(__class, __self, (m_msg_type)__msg)  \
 
 #endif
-
+/*        D(bug("[ZCC] ENTERING "__AROS_STR(mname)                 \
+          "("__AROS_STR(m_msg_type)")\n"));                      \*/
 /******************************************************************/
 
 #define ZUNE_CUSTOMCLASS_1(name, base, parent_name, parent_class,  \

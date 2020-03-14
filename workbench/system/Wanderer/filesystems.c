@@ -3,13 +3,14 @@
     $Id$
 */
 
+#define DEBUG 1
+
 #include  "filesystems.h"
+#include <aros/debug.h>
 
 struct TagItem DummyTags[] = { {TAG_DONE, 0}};
 
 /* define some nonglobal data that can be used by the display hook */
-
-///strcrem()
 static void strcrem(char *s, char *d, char c) 
 {
     while (*s) {
@@ -18,9 +19,7 @@ static void strcrem(char *s, char *d, char c)
     }
     *d = 0;
 }
-///
 
-///AskChoiceNew()
 WORD AskChoiceNew(const char *title, const char *strg, const char *gadgets, UWORD sel, BOOL centered) 
 {
 
@@ -154,23 +153,17 @@ WORD AskChoiceNew(const char *title, const char *strg, const char *gadgets, UWOR
     }
     return back;
 }
-///
 
-/// AskChoice()
 WORD AskChoice(const char *title, const char *strg, const char *gadgets, UWORD sel) 
 {
     return AskChoiceNew(title, strg, gadgets, sel, FALSE);
 }
-///
 
-///AskChoiceCentered()
 WORD AskChoiceCentered(const char *title, const char *strg, const char *gadgets, UWORD sel) 
 {
     return AskChoiceNew(title, strg, gadgets, sel, TRUE);
 }
-///
 
-///combinePath()
 static char *combinePath(APTR pool, char *path, char *file)
 {
     int l;
@@ -192,9 +185,7 @@ static char *combinePath(APTR pool, char *path, char *file)
     }
     return out;
 }
-///
 
-///allocPath()
 static char *allocPath(APTR pool, char *str)
 {
     char *s0, *s1, *s;
@@ -213,9 +204,7 @@ static char *allocPath(APTR pool, char *str)
     }
     return s;
 }
-///
 
-///freeString()
 void freeString(APTR pool, char *str) 
 {
     if (str) 
@@ -226,9 +215,52 @@ void freeString(APTR pool, char *str)
             FreeVecPooled(pool, str);
     }
 }
-///
 
-///allocString()
+/*
+** Retrieves two file paths and checks if both paths points to the same drive
+**
+** inputs:  path1 String pointer to first path to compare
+**          path2 String pointer to second path to compare
+** return:  
+*/
+BYTE IsOnSameDrive(STRPTR path1, STRPTR path2)
+{
+    BYTE _return = -1;
+
+    if (path1 != NULL && path2 != NULL) {
+        BPTR slock = Lock(path1, SHARED_LOCK);
+        if (slock)
+        {
+            BPTR tlock = Lock(path2, SHARED_LOCK);
+            if (tlock) {
+                if (SameDevice(slock, tlock) != DOSFALSE) {
+                    _return = 0;
+                }
+            }
+            UnLock(tlock);
+        }
+        UnLock(slock);
+    }
+    
+    return _return;
+}
+
+STRPTR GetVolume(STRPTR path)
+{
+    STRPTR _return = NULL;
+    STRPTR sep = strchr(path, ':');
+
+    if (sep)
+    {
+        int i = (int)(sep - path);
+        _return = AllocVec(i + 2, MEMF_CLEAR);
+        if (_return != NULL)
+            CopyMem(path, _return, i + 1);
+    }
+
+    return _return;
+}
+
 /*
 ** allocates memory for a string and copies them to the new buffer
 **
@@ -252,9 +284,7 @@ static char *allocString(APTR pool, char *str)
     if (b && (l>0)) strncpy (b, str, l + 1);
     return b;
 }
-///
 
-///CombineString()
 char *CombineString(char *format, ...)
 {
     int   cnt = 0, cnt1;
@@ -304,9 +334,7 @@ char *CombineString(char *format, ...)
     }
     return back;
 }
-///
 
-///GetFileInfo()
 static LONG GetFileInfo(char *name)
 {
     struct  FileInfoBlock  *FIB;
@@ -335,9 +363,7 @@ static LONG GetFileInfo(char *name)
     }
     return info;
 }
-///
 
-///GetProtectionInfo()
 static LONG GetProtectionInfo(char *name)
 {
     struct  FileInfoBlock  *FIB;
@@ -363,9 +389,7 @@ static LONG GetProtectionInfo(char *name)
     }
     return info;
 }
-///
 
-///GetCommentInfo()
 static char *GetCommentInfo(APTR pool, char *name)
 {
     struct  FileInfoBlock  *FIB;
@@ -392,17 +416,13 @@ static char *GetCommentInfo(APTR pool, char *name)
     }
     return info;
 }
-///
 
-///deleteFile()
 static BOOL deleteFile(char *file)
 {
     DeleteFile(file);
     return TRUE;
 }
-///
 
-///copyFile()
 static BOOL copyFile(APTR pool, char *file, char *destpath,
     struct FileInfoBlock *fileinfo, struct Hook *displayHook,
     struct dCopyStruct *display)
@@ -416,6 +436,8 @@ static BOOL copyFile(APTR pool, char *file, char *destpath,
     BPTR   in, out;
     BYTE   *buffer;
     BPTR   nLock;
+
+    D(bug("Filesystems: copyFile -> Source: %s, Destination: %s\n", file, destpath));
 
     if (display != NULL) display->totallen = 0;
     if (display != NULL) display->actlen = 0;
@@ -509,7 +531,25 @@ static BOOL copyFile(APTR pool, char *file, char *destpath,
 
     return quit;
 }
-///
+
+static BOOL moveFile(APTR pool, STRPTR file, STRPTR destpath,
+    struct FileInfoBlock *fileinfo, struct Hook *displayHook,
+    struct dCopyStruct *display) 
+{
+    STRPTR to;
+    STRPTR from;
+    BOOL quit = FALSE;
+   
+    to = combinePath(pool, destpath, FilePart(file));
+    from = file;
+
+    if (Rename(from, to) == DOSFALSE) 
+    {
+        quit = TRUE;
+    }
+
+    return quit;
+}
 
 static VOID handleUnprotect(LONG info, char * spath, char * file, char * target, struct Hook * askHook, WORD * pmode, BOOL * unprotect)
 {
@@ -543,7 +583,6 @@ static VOID handleUnprotect(LONG info, char * spath, char * file, char * target,
 #define dmode (opModes->deletemode)
 #define pmode (opModes->protectmode)
 #define omode (opModes->overwritemode)
-///actionDir()
 static BOOL actionDir(APTR pool, ULONG flags, char *source, char *dest,
     BOOL quit, struct Hook *dHook, struct OpModes * opModes, APTR userdata)
 {
@@ -864,13 +903,59 @@ static BOOL actionDir(APTR pool, ULONG flags, char *source, char *dest,
 
     return quit;
 }
-///
 #undef dmode
 #undef pmode
 #undef omode
 
-///CopyContent()
-BOOL CopyContent(APTR p, char *s, char *d, BOOL makeparentdir, ULONG flags, struct Hook *displayHook, struct OpModes *opModes, APTR userdata) 
+BOOL createDirectory(STRPTR dest, APTR pool, STRPTR s, STRPTR d, STRPTR destname) {
+    BOOL created = FALSE;
+    struct  FileInfoBlock  *FIB;
+    FIB = (struct FileInfoBlock*) AllocDosObject(DOS_FIB,DummyTags);
+    if (FIB) 
+    {
+        dest = combinePath(pool, d, destname);
+        if (dest) 
+        {
+            BPTR nLock = Lock(dest, ACCESS_READ);
+            if (nLock) 
+            {
+                if (Examine(nLock,FIB)) 
+                {
+                    if (FIB->fib_DirEntryType>0) {
+                        created = TRUE;
+                    } 
+                }
+                UnLock(nLock);
+            }
+            if (!created) 
+            {
+                BPTR nDir = CreateDir(dest);
+                if (nDir) 
+                {
+                    created = TRUE;
+                    UnLock(nDir);
+                    LONG prot = GetProtectionInfo(s);
+                    STRPTR comment = GetCommentInfo(pool, s);
+                    if (comment) SetComment(dest, comment);
+                    SetProtection(dest, prot);
+                    freeString(pool, comment);
+                }
+            }
+            if (!created) 
+            {
+                freeString(pool, dest);
+                dest = NULL;
+                created = FALSE;
+            }
+        }
+        FreeDosObject (DOS_FIB,(APTR) FIB);
+    }
+
+    return created;
+}
+
+
+BOOL CopyOrMoveContent(APTR p, char *s, char *d, BOOL makeparentdir, ULONG flags, struct Hook *displayHook, struct OpModes *opModes, APTR userdata) 
 {
 
     struct  FileInfoBlock  *FIB;
@@ -885,6 +970,7 @@ BOOL CopyContent(APTR p, char *s, char *d, BOOL makeparentdir, ULONG flags, stru
     BOOL       dir = TRUE;
     BOOL       back = FALSE;
     BOOL       deletesrc, unprotectsrc;
+    BOOL       doOverwrite = TRUE;
     LONG       info;
 
     if (p == NULL) 
@@ -929,7 +1015,10 @@ BOOL CopyContent(APTR p, char *s, char *d, BOOL makeparentdir, ULONG flags, stru
 
     dest = NULL;
 
-    if ((flags & ACTION_COPY) !=0 ) dest = allocString(pool, d);
+    if ((flags & (ACTION_COPY|ACTION_MOVE)) !=0)
+    {
+        dest = allocString(pool, d);
+    } 
 
     /* If copying a directory, create target directory */
     if (makeparentdir && dir && dest) 
@@ -940,42 +1029,7 @@ BOOL CopyContent(APTR p, char *s, char *d, BOOL makeparentdir, ULONG flags, stru
             {
                 freeString(pool, dest);
                 dest = NULL;
-                FIB = (struct FileInfoBlock*) AllocDosObject(DOS_FIB,DummyTags);
-                if (FIB) 
-                {
-                    dest = combinePath(pool, d, destname);
-                    if (dest) 
-                    {
-                        nLock = Lock(dest, ACCESS_READ);
-                        if (nLock) 
-                        {
-                            Success2 = Examine(nLock,FIB);
-                            if (Success2) if (FIB->fib_DirEntryType>0) created = TRUE;
-                            UnLock(nLock);
-                        }
-                        if (!created) 
-                        {
-                            nDir = CreateDir(dest);
-                            if (nDir) 
-                            {
-                                created = TRUE;
-                                UnLock(nDir);
-                                prot = GetProtectionInfo(s);
-                                comment = GetCommentInfo(pool, s);
-                                if (comment) SetComment(dest, comment);
-                                SetProtection(dest, prot);
-                                freeString(pool, comment);
-                            }
-                        }
-                        if (!created) 
-                        {
-                            freeString(pool, dest);
-                            dest = NULL;
-                            created = FALSE;
-                        }
-                    }
-                    FreeDosObject (DOS_FIB,(APTR) FIB);
-                }
+                created = createDirectory(dest, pool, s, d, destname);
             }
         }
     }
@@ -1060,6 +1114,10 @@ BOOL CopyContent(APTR p, char *s, char *d, BOOL makeparentdir, ULONG flags, stru
                                         }
                                     }
                                 }
+                            } 
+                            else 
+                            {
+                                doOverwrite = FALSE;
                             }
                         }
                     }
@@ -1076,7 +1134,7 @@ BOOL CopyContent(APTR p, char *s, char *d, BOOL makeparentdir, ULONG flags, stru
         {
             if (
                 ((opModes->deletemode == OPMODE_NONE) || (opModes->deletemode == OPMODE_NO)) &&
-                (flags & (ACTION_DELETE|ACTION_COPY)) == ACTION_DELETE
+                (flags & (ACTION_DELETE|ACTION_COPY|ACTION_MOVE)) == ACTION_DELETE
             ) 
             {
                 back = FALSE; 
@@ -1090,8 +1148,8 @@ BOOL CopyContent(APTR p, char *s, char *d, BOOL makeparentdir, ULONG flags, stru
     } 
     else 
     {
-        if (flags == ACTION_DELETE) back = FALSE; 
-        else
+        if ((flags & ACTION_DELETE) != 0) back = FALSE; 
+        else if (doOverwrite)
         {
             STRPTR path = allocPath(pool, s);
             display.file = FilePart(s);
@@ -1103,15 +1161,29 @@ BOOL CopyContent(APTR p, char *s, char *d, BOOL makeparentdir, ULONG flags, stru
             display.dpath = d;
             display.flags = (flags &= ~ACTION_UPDATE);
             if (displayHook) CallHook(displayHook, (Object *) &display, NULL);
-            back = copyFile(pool, s, d, NULL, displayHook, &display);
+            if ((flags & ACTION_COPY) != 0)  
+            {
+                back = copyFile(pool, s, d, NULL, displayHook, &display);
+            }
+            else
+            { 
+                back = moveFile(pool, s, d, NULL, displayHook, &display);
+            }
             freeString(pool, path);
         }
     }
 
-    if (!back && destinfo && infoname) 
+    if (!back && destinfo && infoname && doOverwrite)
     {
         SetProtection(destinfo, 0);
-        copyFile(pool, infoname, d, NULL, NULL, NULL);
+        if ((flags & ACTION_COPY) != 0)  
+        {
+            copyFile(pool, infoname, d, NULL, NULL, NULL);
+        }
+        else
+        {
+            moveFile(pool, infoname, d, NULL, NULL, NULL);
+        }
     }
 
     if (!back && opModes && (opModes->deletemode != OPMODE_NONE) && ((flags & ACTION_DELETE) !=0))
@@ -1131,4 +1203,3 @@ BOOL CopyContent(APTR p, char *s, char *d, BOOL makeparentdir, ULONG flags, stru
         DeletePool(pool);
     return !back;
 }
-///
