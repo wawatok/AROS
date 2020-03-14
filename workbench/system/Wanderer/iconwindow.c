@@ -38,19 +38,11 @@
 #include <datatypes/pictureclass.h>
 #include <clib/macros.h>
 
-#ifdef __AROS__
 #include <aros/debug.h>
 #include <clib/alib_protos.h>
 #include <prefs/wanderer.h>
 #include <zune/customclasses.h>
-#else
-#include <prefs_AROS/wanderer.h>
-#include <zune_AROS/customclasses.h>
-#endif
 
-#if defined(__AMIGA__) && !defined(__PPC__)
-#define NO_INLINE_STDARG
-#endif
 #include <proto/intuition.h>
 #include <proto/muimaster.h>
 
@@ -68,20 +60,6 @@
 
 #include "version.h"
 
-#ifndef __AROS__
-
-#ifdef DEBUG
-  #define D(x) if (DEBUG) x
-  #ifdef __amigaos4__
-  #define bug DebugPrintF
-  #else
-  #define bug kprintf
-  #endif
-#else
-  #define  D(...)
-#endif
-#endif
-
 #if defined(ICONWINDOW_NODETAILVIEWCLASS)
 struct MUI_CustomClass *IconWindowDetailDrawerList_CLASS;
 #endif
@@ -89,11 +67,7 @@ struct MUI_CustomClass *IconWindowDetailDrawerList_CLASS;
 #define WIWVERS       1
 #define WIWREV        0
 
-#ifdef __AROS__
 #define DoSuperNew(cl, obj, ...) DoSuperNewTags(cl, obj, NULL, __VA_ARGS__)
-#else
-#define IconListviewObject NewObject(IconListview_Class->mcc_Class
-#endif
 
 /*** Private Global Data *********************************************************/
 
@@ -279,8 +253,6 @@ STATIC VOID IconWindow_StoreSettings(Object * iconwindow)
 
 /*** Hook functions *********************************************************/
 
-///IconWindow__HookFunc_PrefsUpdatedFunc()
-#ifdef __AROS__
 AROS_UFH3(
     void, IconWindow__HookFunc_PrefsUpdatedFunc,
     AROS_UFHA(struct Hook *,    hook,   A0),
@@ -288,10 +260,6 @@ AROS_UFH3(
     AROS_UFHA(APTR,             param,  A1)
 )
 {
-#else
-HOOKPROTO(IconWindow__HookFunc_PrefsUpdatedFunc, void, APTR *obj, APTR param)
-{
-#endif
     AROS_USERFUNC_INIT
   
     /* Get our private data */
@@ -316,13 +284,7 @@ HOOKPROTO(IconWindow__HookFunc_PrefsUpdatedFunc, void, APTR *obj, APTR param)
 
     AROS_USERFUNC_EXIT
 }
-#ifndef __AROS__
-MakeStaticHook(iwd_PrefsUpdated_hook,IconWindow__HookFunc_PrefsUpdatedFunc);
-#endif
-///
 
-///IconWindow__HookFunc_ProcessBackgroundFunc()
-#ifdef __AROS__
 AROS_UFH3(
     void, IconWindow__HookFunc_ProcessBackgroundFunc,
     AROS_UFHA(struct Hook *,    hook,   A0),
@@ -330,10 +292,6 @@ AROS_UFH3(
     AROS_UFHA(APTR,             param,  A1)
 )
 {
-#else
-HOOKPROTO(IconWindow__HookFunc_ProcessBackgroundFunc, void, APTR *obj, APTR param)
-{
-#endif
     AROS_USERFUNC_INIT
   
     /* Get our private data */
@@ -363,13 +321,7 @@ HOOKPROTO(IconWindow__HookFunc_ProcessBackgroundFunc, void, APTR *obj, APTR para
 
     AROS_USERFUNC_EXIT
 }
-#ifndef __AROS__
-MakeStaticHook(iwd_ProcessBackground_hook,IconWindow__HookFunc_ProcessBackgroundFunc);
-#endif
-///
 
-///IconWindow__HookFunc_WandererBackFillFunc()
-#ifdef __AROS__
 AROS_UFH3(
     void, IconWindow__HookFunc_WandererBackFillFunc,
     AROS_UFHA(struct Hook *,        hook,   A0),
@@ -377,10 +329,6 @@ AROS_UFH3(
     AROS_UFHA(struct BackFillMsg *, BFM,  A1)
 )
 {
-#else
-HOOKPROTO(IconWindow__HookFunc_WandererBackFillFunc, void, struct RastPort *RP, struct BackFillMsg *BFM)
-{
-#endif
     AROS_USERFUNC_INIT
   
     struct IconWindow_BackFillHookData *HookData = NULL;
@@ -429,12 +377,7 @@ D(bug("[Wanderer:IconWindow]: %s()\n", __PRETTY_FUNCTION__));
 
     AROS_USERFUNC_EXIT
 }
-#ifndef __AROS__
-MakeStaticHook(Hook_WandererBackFillFunc,IconWindow__HookFunc_WandererBackFillFunc);
-#endif
-///
 
-///OM_NEW()
 Object *IconWindow__OM_NEW(Class *CLASS, Object *self, struct opSet *message)
 {
     struct iconWindow_Extension *iw_Extension = NULL;
@@ -505,17 +448,9 @@ D(bug("[Wanderer:IconWindow] %s: Screen @ 0x%p\n", __PRETTY_FUNCTION__, _newIcon
     {
 D(bug("[Wanderer:IconWindow] %s: Allocated WindowBackFillHook @ 0x%p\n", __PRETTY_FUNCTION__, _newIconWin__BackFillHook));
 
-#ifdef __AROS__
             _newIconWin__BackFillHook->h_Entry = ( HOOKFUNC )IconWindow__HookFunc_WandererBackFillFunc;
-#else
-            _newIconWin__BackFillHook = &Hook_WandererBackFillFunc;
-#endif
 
-//#if defined(__MORPHOS__)
-//        WindowBF_TAG = MUIA_Window_BackFillHook;
-//#else
         WindowBF_TAG = WA_BackFill;
-//#endif
     }
 
     if (isRoot)
@@ -818,11 +753,7 @@ D(bug("]\n"));
 
         if (prefs)
         {
-#ifdef __AROS__
             data->iwd_PrefsUpdated_hook.h_Entry = ( HOOKFUNC )IconWindow__HookFunc_PrefsUpdatedFunc;
-#else
-            data->iwd_PrefsUpdated_hook = &iwd_PrefsUpdated_hook;
-#endif
 
             DoMethod
               (
@@ -839,11 +770,7 @@ D(bug("]\n"));
             SET(data->iwd_IconListObj, MUIA_Font, data->iwd_WindowFont);
         }
 
-#ifdef __AROS__
         data->iwd_ProcessBackground_hook.h_Entry = ( HOOKFUNC )IconWindow__HookFunc_ProcessBackgroundFunc;
-#else
-        data->iwd_ProcessBackground_hook = &iwd_ProcessBackground_hook;
-#endif
 
         if ((data->iwd_BackFill_hook = _newIconWin__BackFillHook))
         {
@@ -891,9 +818,7 @@ D(bug("]\n"));
 D(bug("[Wanderer:IconWindow] obj = %ld\n", self));
     return self;
 }
-///
 
-///OM_DISPOSE()
 IPTR IconWindow__OM_DISPOSE(Class *CLASS, Object *self, Msg message)
 {
     SETUP_ICONWINDOW_INST_DATA;
@@ -925,9 +850,7 @@ IPTR IconWindow__OM_DISPOSE(Class *CLASS, Object *self, Msg message)
   
     return DoSuperMethodA(CLASS, self, message);
 }
-///
 
-///OM_SET()
 IPTR IconWindow__OM_SET(Class *CLASS, Object *self, struct opSet *message)
 {
     SETUP_ICONWINDOW_INST_DATA;
@@ -1080,9 +1003,7 @@ IPTR IconWindow__OM_SET(Class *CLASS, Object *self, struct opSet *message)
 
     return rv;
 }
-///
 
-///OM_GET()
 IPTR IconWindow__OM_GET(Class *CLASS, Object *self, struct opGet *message)
 {
     SETUP_ICONWINDOW_INST_DATA;
@@ -1153,9 +1074,7 @@ IPTR IconWindow__OM_GET(Class *CLASS, Object *self, struct opGet *message)
 
     return rv;
 }
-///
 
-///IconWindow__MUIM_Window_Setup()
 IPTR IconWindow__MUIM_Window_Setup
 (
     Class *CLASS, Object *self, Msg message
@@ -1236,9 +1155,7 @@ IPTR IconWindow__MUIM_Window_Setup
 
     return TRUE;
 }
-///
 
-///IconWindow__MUIM_Window_Cleanup()
 IPTR IconWindow__MUIM_Window_Cleanup
 (
     Class *CLASS, Object *self, Msg message
@@ -1297,9 +1214,7 @@ IPTR IconWindow__MUIM_Window_Cleanup
     }
     return DoSuperMethodA(CLASS, self, message);
 }
-///
 
-///IconWindow__MUIM_IconWindow_DoubleClicked()
 IPTR IconWindow__MUIM_IconWindow_DoubleClicked
 (
     Class *CLASS, Object *self, Msg message
@@ -1321,9 +1236,7 @@ IPTR IconWindow__MUIM_IconWindow_DoubleClicked
 
     return TRUE;
 }
-///
 
-///IconWindow__MUIM_IconWindow_Clicked()
 IPTR IconWindow__MUIM_IconWindow_Clicked
 (
     Class *CLASS, Object *self, Msg message
@@ -1345,9 +1258,7 @@ IPTR IconWindow__MUIM_IconWindow_Clicked
 
     return TRUE;
 }
-///
 
-///IconWindow__MUIM_IconWindow_IconsDropped()
 IPTR IconWindow__MUIM_IconWindow_IconsDropped
 (
     Class *CLASS, Object *self, Msg message
@@ -1373,9 +1284,7 @@ IPTR IconWindow__MUIM_IconWindow_IconsDropped
 
     return TRUE;
 }
-///
 
-///IconWindow__MUIM_IconWindow_AppWindowDrop()
 IPTR IconWindow__MUIM_IconWindow_AppWindowDrop
 (
     Class *CLASS, Object *self, Msg message
@@ -1397,9 +1306,7 @@ D(bug("[Wanderer:IconWindow]: %s()\n", __PRETTY_FUNCTION__));
 
     return TRUE;
 }
-///
 
-///IconWindow__MUIM_IconWindow_Open()
 IPTR IconWindow__MUIM_IconWindow_Open
 (
     Class *CLASS, Object *self, Msg message
@@ -1421,9 +1328,7 @@ D(bug("[Wanderer:IconWindow] %s: All done\n", __PRETTY_FUNCTION__));
 
     return TRUE;
 }
-///
 
-///IconWindow__MUIM_IconWindow_DirectoryUp()
 IPTR IconWindow__MUIM_IconWindow_DirectoryUp
 (
   Class *CLASS, Object *self, Msg message
@@ -1446,9 +1351,7 @@ IPTR IconWindow__MUIM_IconWindow_DirectoryUp
   
   return TRUE;
 }
-///
 
-///IconWindow__MUIM_IconWindow_UnselectAll()
 IPTR IconWindow__MUIM_IconWindow_UnselectAll
 (
   Class *CLASS, Object *self, Msg message
@@ -1462,9 +1365,7 @@ IPTR IconWindow__MUIM_IconWindow_UnselectAll
   
   return TRUE;
 }
-///
 
-///IconWindow__MUIM_IconWindow_Remove()
 IPTR IconWindow__MUIM_IconWindow_Remove
 (
   Class *CLASS, Object *self, Msg message
@@ -1481,10 +1382,7 @@ IPTR IconWindow__MUIM_IconWindow_Remove
   
   return TRUE;
 }
-///
 
-/*** Stubs for Backfill Hooks ******************************************************************/
-///IconWindow__MUIM_IconWindow_BackFill_Register()
 IPTR IconWindow__MUIM_IconWindow_BackFill_Register
 (
   Class *CLASS, Object *self, struct MUIP_IconWindow_BackFill_Register *message
@@ -1499,9 +1397,7 @@ IPTR IconWindow__MUIM_IconWindow_BackFill_Register
 
   return TRUE;
 }
-///
 
-///IconWindow__MUIM_IconWindow_BackFill_Setup()
 IPTR IconWindow__MUIM_IconWindow_BackFill_Setup
 (
   Class *CLASS, Object *self, struct MUIP_IconWindow_BackFill_Setup *message
@@ -1515,9 +1411,7 @@ IPTR IconWindow__MUIM_IconWindow_BackFill_Setup
 
   return (iconwindow_BackFill_Active->bfd_MUIM_IconWindow_BackFill_Setup)(CLASS, self, message);
 }
-///
 
-///IconWindow__MUIM_IconWindow_BackFill_Cleanup()
 IPTR IconWindow__MUIM_IconWindow_BackFill_Cleanup
 (
   Class *CLASS, Object *self, struct MUIP_IconWindow_BackFill_Cleanup *message
@@ -1531,9 +1425,7 @@ IPTR IconWindow__MUIM_IconWindow_BackFill_Cleanup
 
   return (iconwindow_BackFill_Active->bfd_MUIM_IconWindow_BackFill_Cleanup)(CLASS, self, message);
 }
-///
 
-///IconWindow__MUIM_IconWindow_BackFill_ProcessBackground()
 IPTR IconWindow__MUIM_IconWindow_BackFill_ProcessBackground
 (
   Class *CLASS, Object *self, struct MUIP_IconWindow_BackFill_ProcessBackground *message
@@ -1612,9 +1504,7 @@ IPTR IconWindow__MUIM_IconWindow_BackFill_ProcessBackground
 
   return retVal;
 }
-///
 
-///IconWindow__MUIM_IconWindow_BackFill_DrawBackground()
 IPTR IconWindow__MUIM_IconWindow_BackFill_DrawBackground
 (
   Class *CLASS, Object *self, struct MUIP_IconWindow_BackFill_DrawBackground *message
@@ -1628,9 +1518,7 @@ IPTR IconWindow__MUIM_IconWindow_BackFill_DrawBackground
 
   return (iconwindow_BackFill_Active->bfd_MUIM_IconWindow_BackFill_DrawBackground)(CLASS, self, message);
 }
-///
 
-///IconWindow__MUIM_IconWindow_RateLimitRefresh()
 IPTR IconWindow__MUIM_IconWindow_RateLimitRefresh
 (
   Class *CLASS, Object *self, Msg message
@@ -1645,9 +1533,7 @@ IPTR IconWindow__MUIM_IconWindow_RateLimitRefresh
 
     return (IPTR)FALSE;
 }
-///
 
-///IconWindow__MUIM_IconWindow_Snapshot()
 IPTR IconWindow__MUIM_IconWindow_Snapshot
 (
   Class *CLASS, Object *self, struct MUIP_IconWindow_Snapshot * message
@@ -1708,9 +1594,7 @@ IPTR IconWindow__MUIM_IconWindow_Snapshot
 
     return (IPTR)TRUE;
 }
-///
 
-///
 IPTR IconWindow__SetupClass()
 {
     D(bug("[Wanderer:IconWindow]: %s()\n", __PRETTY_FUNCTION__));
@@ -1723,7 +1607,7 @@ IPTR IconWindow__SetupClass()
 
     return TRUE;
 }
-///
+
 /*** Setup ******************************************************************/
 ICONWINDOW_CUSTOMCLASS
 (
@@ -1752,20 +1636,3 @@ ICONWINDOW_CUSTOMCLASS
 );
 
 ADD2INIT(IconWindow__SetupClass, 0);
-
-#ifndef __AROS__
-int initIconWindowClass(void)
-{
-  IPTR ret1 = IconWindow_Initialize();
-
-  IPTR ret2 = IconWindow__SetupClass();
-
-  IPTR ret3 = ImageBackFill__SetupClass();
-
-  if (ret1 && ret2 && ret3)
-    return TRUE;
-  else
-    return FALSE;
-
-}
-#endif

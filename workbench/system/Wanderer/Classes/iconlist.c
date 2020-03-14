@@ -7112,6 +7112,7 @@ IPTR IconList__MUIM_DragDrop(struct IClass *CLASS, Object *obj, struct MUIP_Drag
             if (copycount > 0)
             {
                 dragDropEvent->drop_TargetObj = obj;
+                dragDropEvent->drop_SourceObj = message->obj;
 
 #if defined(DEBUG_ILC_ICONDRAGDROP)
                 D(bug("[IconList] %s: Causing DROP notification..\n", __PRETTY_FUNCTION__));
