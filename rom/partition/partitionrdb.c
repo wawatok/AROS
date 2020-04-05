@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
 */
@@ -186,6 +186,8 @@ UBYTE i;
 struct RigidDiskBlock *rdb = (struct RigidDiskBlock *)root->buffer;
 struct PartitionType type;
 struct TagItem tags[] = {{PT_TYPE, (IPTR)&type}, {TAG_DONE, 0}};
+
+	bug("%s() started.\n", __FUNCTION__ );
 
     if (sizeof(root->buffer) < (root->de.de_SizeBlock << 2))
         return 0;
@@ -419,14 +421,19 @@ UBYTE *buffer;
 struct RDBData *data;
 UBYTE i;
 
+	D(bug("PartitionRDBOpenPartitionTable() start\n"));
+	D(bug("PartitionRDBOpenPartitionTable() Allocating buffer.\n"));
     buffer = AllocVec(root->de.de_SizeBlock << 2, MEMF_PUBLIC);
     if (!buffer)
     	return 1;
+    D(bug("PartitionRDBOpenPartitionTable() Allocating memory for RDB\n"));
     data = AllocMem(sizeof(struct RDBData), MEMF_PUBLIC);
     if (data)
     {
+    	D(bug("PartitionRDBOpenPartitionTable() Reading in RDB block\n"));
         for (i=0;i<RDB_LOCATION_LIMIT; i++)
         {
+        	D(bug("PartitionRDBOpenPartitionTable() Checking block %d for RDB block.\n", i ));
             if (readBlock(PartitionBase, root, i, buffer) != 0) {
             	FreeVec(buffer);
                 return 1;
@@ -439,12 +446,15 @@ UBYTE i;
         {
             ULONG block;
 
+            D(bug("PartitionRDBOpenPartitionTable() RDB found!\n"));
+
             data->rdbblock = i;
             NEWLIST(&root->table->list);
             NEWLIST(&data->badblocklist);
             NEWLIST(&data->fsheaderlist);
             root->table->data = data;
 
+            D(bug("PartitionRDBOpenPartitionTable() Get disk geometry\n"));
             /* take the values of the rdb instead of TD_GEOMETRY */
             root->dg.dg_SectorSize   = AROS_BE2LONG(data->rdb.rdb_BlockBytes);
             root->dg.dg_Cylinders    = AROS_BE2LONG(data->rdb.rdb_Cylinders);
@@ -457,6 +467,7 @@ UBYTE i;
             root->dg.dg_CylSectors   = root->dg.dg_TrackSectors * root->dg.dg_Heads;
             root->dg.dg_TotalSectors = root->dg.dg_CylSectors * root->dg.dg_Cylinders;
 
+            D(bug("PartitionRDBOpenPartitionTable() Read bad block list\n"));
             /* read bad blocks */
             block = AROS_BE2LONG(data->rdb.rdb_BadBlockList);
             while (block != (ULONG)-1)
@@ -477,11 +488,13 @@ UBYTE i;
                 else
                     break;
             }
+
+            D(bug("PartitionRDBOpenPartitionTable() Reading partition block.\n"));
             /* read partition blocks */
             block = AROS_BE2LONG(data->rdb.rdb_PartitionList);
             while (block != (ULONG)-1)
             {
-            struct PartitionHandle *ph;
+            	struct PartitionHandle *ph;
                 if (readBlock(PartitionBase, root, block, buffer)==0)
                 {
                     ph = PartitionRDBNewHandle(PartitionBase, root, (struct PartitionBlock *)buffer);
@@ -496,6 +509,8 @@ UBYTE i;
                 else
                     break;
             }
+
+            D(bug("PartitionRDBOpenPartitionTable() Reading Filesystem blocks\n"));
             /* read filesystem blocks */
             block = AROS_BE2LONG(data->rdb.rdb_FileSysHeaderList);
             while (block != (ULONG)-1)

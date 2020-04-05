@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -179,6 +179,8 @@ static LONG PartitionMBROpenPartitionTable(struct Library *PartitionBase, struct
     struct PartitionHandle *ph;
     struct MBR *mbr;
     UBYTE i;
+
+    bug("%s() begin.\n",__FUNCTION__ );
 
     mbr = AllocMem(root->de.de_SizeBlock<<2, MEMF_PUBLIC);
     if (mbr)

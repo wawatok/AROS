@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
 
 */
@@ -108,6 +108,8 @@ struct MBR *ebr;
 UBYTE i;
 ULONG block_no = 0;
 BOOL atEnd = FALSE;
+
+	bug("%s() begin.\n",__FUNCTION__ );
 
     ebr = AllocMem(root->de.de_SizeBlock<<2, MEMF_PUBLIC);
     if (ebr != NULL)

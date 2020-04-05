@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2019, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2019, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Discover all mountable partitions
@@ -245,22 +245,37 @@ static BOOL CheckTables(struct ExpansionBase *ExpansionBase, struct Library *Par
     BOOL retval = FALSE;
     struct PartitionHandle *ph;
 
+    D(bug("CheckTables() Opening partition table.\n") );
+
     /* Traverse partition tables recursively, and attempt to add a BootNode
        for any non-subtable partitions found */
-    if (OpenPartitionTable(table) == 0)
+    if ( OpenPartitionTable(table) == 0 )
     {
+    	D(bug("CheckTables() Partition table opened successfully.\n") );
         ph = (struct PartitionHandle *)table->table->list.lh_Head;
+        if ( ph ) D(bug("CheckTables() opened parition '%s'\n", ph->ln.ln_Name ? ph->ln.ln_Name : "NONE" ) );
         while (ph->ln.ln_Succ)
         {
             /* Attempt to add partition to system if it isn't a subtable */
             if (!CheckTables(ExpansionBase, PartitionBase, fssm, ph, SysBase))
-                AddPartitionVolume(ExpansionBase, PartitionBase, fssm, table,
-                    ph, SysBase);
+            {
+            	D(bug("CheckTables() Adding partition '%s' to volume list.\n", ph->ln.ln_Name ? ph->ln.ln_Name : "NONE" ) );
+                AddPartitionVolume(ExpansionBase, PartitionBase, fssm, table, ph, SysBase);
+            }else
+            {
+            	D(bug("CheckTables() Not adding partition '%s' to volume list.\n", ph->ln.ln_Name ? ph->ln.ln_Name : "NONE" ) );
+            }
             ph = (struct PartitionHandle *)ph->ln.ln_Succ;
+            if ( ph ) D(bug("CheckTables() opened parition '%s'\n", ph->ln.ln_Name ? ph->ln.ln_Name : "NONE" ) );
         }
         retval = TRUE;
+        D(bug("CheckTables() Closing partition table\n" ) );
         ClosePartitionTable(table);
+    }else
+    {
+    	D(bug("CheckTables() Unable to open the partition table.  Reason not given.\n") );
     }
+    D(bug("CheckTables() exiting\n" ) );
     return retval;
 }
 
@@ -269,8 +284,7 @@ static VOID CheckPartitions(struct ExpansionBase *ExpansionBase, struct Library 
     struct DeviceNode *dn = bn->bn_DeviceNode;
     BOOL res = FALSE;
 
-    D(bug("CheckPartitions('%b') handler seglist = %x, handler = %s\n", dn->dn_Name,
-            dn->dn_SegList, AROS_BSTR_ADDR(dn->dn_Handler)));
+    D(bug("CheckPartitions('%b') handler seglist = %x, handler = %s\n", dn->dn_Name, dn->dn_SegList, AROS_BSTR_ADDR(dn->dn_Handler)));
 
     /* Examples:
      * ata.device registers a HDx device describing whole disk with no handler name and no seglist
@@ -280,19 +294,30 @@ static VOID CheckPartitions(struct ExpansionBase *ExpansionBase, struct Library 
     /* If we already have filesystem handler, don't do anything */
     if (dn->dn_SegList == BNULL && dn->dn_Handler == BNULL)
     {
+    	D(bug("CheckPartions() Getting fileSystemStartMsg for partion.\n"));
     	struct FileSysStartupMsg *fssm = BADDR(dn->dn_Startup);
 
-	if (fssm && fssm->fssm_Device)
-	{
-            struct PartitionHandle *pt = OpenRootPartition(AROS_BSTR_ADDR(fssm->fssm_Device), fssm->fssm_Unit);
+		if (fssm && fssm->fssm_Device)
+		{
+			D(bug("CheckPartions() FileSystemStartMsg Device: '%s'\n", AROS_BSTR_ADDR( fssm->fssm_Device ) ));
+			D(bug("CheckPartions() FileSystemStartMsg Environment: '%s'\n", AROS_BSTR_ADDR( fssm->fssm_Environ ) ));
+			D(bug("CheckPartions() FileSystemStartMsg Flags: '%d'\n", fssm->fssm_Flags ));
+			D(bug("CheckPartions() FileSystemStartMsg Unit: '%d'\n", fssm->fssm_Unit ));
+			D(bug("CheckPartions() Got a FileSystemStartMsg for partition '%s'\n", AROS_BSTR_ADDR( fssm->fssm_Device ) ));
+			D(bug("CheckPartions() Opening parition handle.\n"));
+			struct PartitionHandle *pt = OpenRootPartition(AROS_BSTR_ADDR(fssm->fssm_Device), fssm->fssm_Unit);
 
-	    if (pt)
+			if ( pt )
             {
+				D(bug("CheckPartions() Got partition handle\n"));
                 res = CheckTables(ExpansionBase, PartitionBase, fssm, pt, SysBase);
-
-           	CloseRootPartition(pt);
+                D( bug("CheckPartions() this partition check tables returns: %s\n", res == FALSE ? "FALSE" : "TRUE" ) );
+                CloseRootPartition(pt);
            }
         }
+    }else
+    {
+    	D(bug("CheckPartions() Nothing to be done for this partition because it already has a fily system handler.\n"));
     }
 
     Remove(&bn->bn_Node);
@@ -301,6 +326,7 @@ static VOID CheckPartitions(struct ExpansionBase *ExpansionBase, struct Library 
         /* If no partitions were found for the DeviceNode, put it back */
         Enqueue(&ExpansionBase->MountList, &bn->bn_Node);
     }
+    D(bug("CheckPartions() exiting.\n"));
 }
 
 /* Scan all partitions manually for additional volumes that can be mounted. */
@@ -311,26 +337,37 @@ void dosboot_BootScan(LIBBASETYPEPTR LIBBASE)
     struct BootNode *bootNode, *temp;
     struct List rootList;
 
+    D(bug("dosboot_BootScan() Opening partition library.\n"));
+
     /* If we have partition.library, we can look for partitions */
     PartitionBase = OpenLibrary("partition.library", 2);
     if (PartitionBase)
     {
+    	D(bug("dosboot_BootScan() Obtaining lock for bootsemaphore.\n"));
         ObtainSemaphore(&IntExpBase(ExpansionBase)->BootSemaphore);
 
+        D(bug("dosboot_BootScan() Build a list of bootnodes from the mountlist\n"));
         /* Transfer all bootnodes in the mountlist into a temporary list.
            The assumption is that all bootnodes created before now represent
            entire disks */
         NewList(&rootList);
-        while ((temp = (struct BootNode *)RemHead(&ExpansionBase->MountList))
-            != NULL)
+        while ((temp = (struct BootNode *)RemHead(&ExpansionBase->MountList))!= NULL)
+        {
+        	D(bug("dosboot_BootScan() Added a node '%s'\n", ((struct Node *)temp)->ln_Name ? ((struct Node *)temp)->ln_Name : "none" ) );
             AddTail(&rootList, (struct Node *) temp);
+        }
 
         ForeachNodeSafe (&rootList, bootNode, temp)
-            CheckPartitions(ExpansionBase, PartitionBase, SysBase,
-                bootNode);
+        {
+        	D(bug("dosboot_BootScan() Checking partition\n"));
+            CheckPartitions(ExpansionBase, PartitionBase, SysBase,bootNode);
+        }
 
         ReleaseSemaphore(&IntExpBase(ExpansionBase)->BootSemaphore);
 
-	CloseLibrary(PartitionBase);
+        CloseLibrary(PartitionBase);
+    }else
+    {
+    	D(bug("dosboot_BootScan() Unable to open parition library.\n"));
     }
 }

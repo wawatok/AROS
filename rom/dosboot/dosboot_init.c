@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Boot AROS
@@ -176,6 +176,7 @@ int dosboot_Init(LIBBASETYPEPTR LIBBASE)
 
     LIBBASE->bm_ExpansionBase = ExpansionBase;
 
+    D(bug("dosboot_Init: Opening bootloader.resource\n"));
     /*
      * Search the kernel parameters for the bootdelay=%d string. It determines the
      * delay in seconds.
@@ -227,17 +228,24 @@ int dosboot_Init(LIBBASETYPEPTR LIBBASE)
             }
             IntExpBase(ExpansionBase)->BootFlags = LIBBASE->db_BootFlags;
         }
+    }else
+    {
+    	D(bug("dosboot_Init: Unable to load bootloader.resource\n"));
     }
 
+    D(bug("dosboot_Init: Scanning for boot drives.\n"));
     /* Scan for any additional partition volumes */
     dosboot_BootScan(LIBBASE);
 
+    D( bug("dosboot_Init: Selecting this drive for our boot: '%s'\n", bootDeviceName ? bootDeviceName : "none" ) );
     /* Select the initial boot device, so that the choice is available in the menu */
     selectBootDevice(LIBBASE, bootDeviceName);
 
+    D(bug("dosboot_Init: Will show the boot loader if the user asked for it.\n"));
     /* Show the boot menu if needed */
     bootmenu_Init(LIBBASE, WantBootMenu);
 
+    D( bug("dosboot_Init: Setting the previously choosen device for booting.\n" ) );
     /* Set final boot device */
     setBootDevice(LIBBASE);
 

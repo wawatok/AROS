@@ -148,7 +148,7 @@ FILES   :=
 AFILES  := ext_entry
 
 KLIBS   :=  keymap graphics layers intuition gadtools icon workbench \
-            mathffp mathieeesingbas freeanim lowlevel nonvolatile nvdisk \
+            mathffp mathieeesingbas freeanim nonvolatile nvdisk \
             setpatch
 KDEVS   := ata
 KHNDLRS := 

@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
     
     Desc: GPT partition table handler
@@ -406,6 +406,8 @@ static void PartitionGPTClosePartitionTable(struct Library *PartitionBase, struc
 static LONG PartitionGPTOpenPartitionTable(struct Library *PartitionBase, struct PartitionHandle *root)
 {
     LONG res;
+
+    bug("%s() begin.\n",__FUNCTION__ );
 
     /*
      * The header is attached to partition table handle.

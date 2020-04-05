@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2013, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -43,6 +43,42 @@ const struct Resident ata_BootWait =
     &ata_Wait,
 };
 
+/* Delay just like Dos/Delay(), ticks are
+ * in 1/50th of a second.
+ */
+static void bootDelay(ULONG timeout)
+{
+    struct timerequest  timerio;
+    struct MsgPort     timermp;
+
+    memset(&timermp, 0, sizeof(timermp));
+
+    timermp.mp_Node.ln_Type = NT_MSGPORT;
+    timermp.mp_Flags        = PA_SIGNAL;
+    timermp.mp_SigBit       = SIGB_SINGLE;
+    timermp.mp_SigTask      = FindTask(NULL);
+    NEWLIST(&timermp.mp_MsgList);
+
+    timerio.tr_node.io_Message.mn_Node.ln_Type  = NT_REPLYMSG;
+    timerio.tr_node.io_Message.mn_ReplyPort     = &timermp;
+    timerio.tr_node.io_Message.mn_Length        = sizeof(timermp);
+
+    if (OpenDevice("timer.device", UNIT_VBLANK, (struct IORequest *)&timerio, 0) != 0) {
+        D(bug("dosboot: Can't open timer.device unit 0\n"));
+        return;
+    }
+
+    timerio.tr_node.io_Command  = TR_ADDREQUEST;
+    timerio.tr_time.tv_secs     = timeout / TICKS_PER_SECOND;
+    timerio.tr_time.tv_micro    = 1000000UL / TICKS_PER_SECOND * (timeout % TICKS_PER_SECOND);
+
+    SetSignal(0, SIGF_SINGLE);
+
+    DoIO(&timerio.tr_node);
+
+    CloseDevice((struct IORequest *)&timerio);
+}
+
 /*
  * The purpose of this delay is to wait until device detection is done
  * before boot sequence enters DOS bootstrap. Without this we reach the
@@ -75,6 +111,8 @@ AROS_UFH3(static APTR, ata_Wait,
 #else
     Forbid();
 #endif
+
+    //bootDelay( 5* 50 );
 
     /* We do not want to deal with IORequest and units, so just FindName() */
     ATABase = (struct ataBase *)FindName(&SysBase->DeviceList, ata_LibName);
