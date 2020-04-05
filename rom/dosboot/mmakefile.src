@@ -10,7 +10,8 @@ FILES := dosboot_init bootstrap bootscan \
 #MM- kernel-dosboot-includes : kernel-bootloader-includes
 #MM- kernel-dosboot : includes linklibs kernel-bootloader-includes
 USER_CPPFLAGS := \
-               -DUSE_EXEC_DEBUG
+               -DUSE_EXEC_DEBUG \
+               -DDEBUG=1
 USER_INCLUDES := -I$(SRCDIR)/rom/devs -I$(GENDIR)/$(CURDIR)/dosboot
 USER_LDFLAGS := -static
 
